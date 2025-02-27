@@ -1,0 +1,1 @@
+exports.tenantControllers = require('./Tenant');

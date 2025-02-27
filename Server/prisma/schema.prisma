@@ -1,0 +1,317 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int         @id @default(autoincrement())
+  email        String      @unique
+  phone        String      @unique
+  password     String
+  accountType  AccountType
+  token        String?     
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  owner        Owner?      @relation
+  tenant       Tenant?     @relation
+  admin        Admin?      @relation
+}
+
+
+model Owner {
+  id            Int         @id @default(autoincrement())
+  userId        Int         @unique
+  name          String
+  contact       String
+  ownerType     OwnerType 
+  
+  user          User        @relation(fields: [userId], references: [id])
+  pgBuildings   PGBuilding[]
+  wardens       PGBuilding[] @relation("Warden")
+}
+
+model Admin {
+  id           Int         @id @default(autoincrement())
+  userId       Int         @unique
+  name         String
+  contact      String
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  
+  user         User        @relation(fields: [userId], references: [id])
+}
+
+model Tenant {
+  id                  Int               @id @default(autoincrement())
+  userId              Int               @unique
+  name                String
+  contact             String
+  gender              String
+  dob                 DateTime
+  emergencyContact    String
+  address             String
+  profession          String
+  bloodGroup          String
+  image               String
+  governmentIdType    GovernmentIDType?
+  governmentIdNumber  String?
+  governmentIdLink    String?
+  
+  user                User              @relation(fields: [userId], references: [id])
+  bookings            Booking[]
+}
+
+model PGBuilding {
+  id                  Int         @id @default(autoincrement())
+  name                String
+  landmark            String
+  streetName          String
+  locality            String
+  city                String
+  state               String
+  image               String?
+  locationCoordinates String
+  genderType          GenderType?
+  numberOfFloors      Int?
+  totalOccupancy      Int?
+  ownerId             Int
+  wardenId            Int?
+  hasMess             Boolean?
+  seaterType          Json?
+  seaterPrice         Json?
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  owner               Owner       @relation(fields: [ownerId], references: [id])
+  warden              Owner?      @relation("Warden", fields: [wardenId], references: [id])
+  rooms               Room[]
+  amenities           Amenities[]
+  announcements       Announcement[]
+  emergencyContacts   EmergencyContact[]
+  messMenu            MessMenu[]
+}
+
+model Room {
+  id           Int      @id @default(autoincrement())
+  roomNumber   String
+  floorNumber  Int
+  pgBuildingId Int
+  hasAc        Boolean?
+  seater       SeaterType?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  pgBuilding   PGBuilding @relation(fields: [pgBuildingId], references: [id])
+  cots         Cot[]
+}
+
+model Cot {
+  id           Int        @id @default(autoincrement())
+  cotNumber    String
+  roomId       Int
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  isOccupied   Boolean    @default(false)
+  status       CotStatus  @default(AVAILABLE)    // Changed to make it required with default
+  room         Room       @relation(fields: [roomId], references: [id])
+  bookings     Booking[]
+}
+
+model Booking {
+  id               Int            @id @default(autoincrement())
+  tenantId         Int
+  cotId            Int
+  monthlyRent      Float
+  startDate        DateTime
+  endDate          DateTime
+  status           BookingStatus
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  tenant           Tenant         @relation(fields: [tenantId], references: [id])
+  cot              Cot            @relation(fields: [cotId], references: [id])
+  paymentInvoices  PaymentInvoice[]
+  complaints       Complaint[]
+  reviews          Review[]
+  messOptOut       MessOptOut[]
+}
+
+model PaymentInvoice {
+  id               Int           @id @default(autoincrement())
+  bookingId        Int
+  month            Int
+  year             Int
+  amount           Float
+  status           InvoiceStatus
+  dueDate          DateTime
+  paymentDate      DateTime?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  booking          Booking       @relation(fields: [bookingId], references: [id])
+}
+
+model MessOptOut {
+  id               Int           @id @default(autoincrement())
+  bookingId        Int
+  optOutDate       DateTime
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  booking          Booking       @relation(fields: [bookingId], references: [id])
+}
+
+model Complaint {
+  id           Int          @id @default(autoincrement())
+  bookingId    Int
+  title        String
+  description  String
+  category     ComplaintCategory
+  status       String
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  booking      Booking      @relation(fields: [bookingId], references: [id])
+}
+
+model Review {
+  id           Int       @id @default(autoincrement())
+  bookingId    Int
+  rating       Int
+  reviewText   String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  booking      Booking   @relation(fields: [bookingId], references: [id])
+}
+
+model Announcement {
+  id           Int       @id @default(autoincrement())
+  pgBuildingId Int
+  title        String
+  message      String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  pgBuilding   PGBuilding @relation(fields: [pgBuildingId], references: [id])
+}
+
+model EmergencyContact {
+  id           Int       @id @default(autoincrement())
+  pgBuildingId Int
+  type         String
+  name         String
+  contact      String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  pgBuilding   PGBuilding @relation(fields: [pgBuildingId], references: [id])
+}
+
+model MessMenu {
+  id           Int       @id @default(autoincrement())
+  pgBuildingId Int
+  day          String
+  menu         String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  pgBuilding   PGBuilding @relation(fields: [pgBuildingId], references: [id])
+}
+
+model Amenities {
+  id               Int      @id @default(autoincrement())
+  pgBuildingId     Int
+  wifi             Boolean
+  meal             Boolean
+  furnishing       Boolean
+  commonarea       Boolean
+  securityguard    Boolean
+  parking          Boolean
+  laundry          Boolean
+  gym              Boolean
+  airConditioner   Boolean
+  cctv             Boolean
+  housekeeping     Boolean
+  additionalAmenities String[]  @default([])
+
+  pgBuilding       PGBuilding @relation(fields: [pgBuildingId], references: [id])
+}
+
+model OTP {
+  id           Int       @id @default(autoincrement())
+  phone        String
+  code         String
+  expiresAt    DateTime
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+enum AccountType {
+  Owner
+  Tenant
+  Admin
+}
+
+enum OwnerType {
+  General
+  Warden
+}
+
+enum GenderType {
+  Male
+  Female
+  Coed
+}
+
+enum InvoiceStatus {
+  Paid
+  Unpaid
+}
+
+enum BookingStatus {
+  Upcoming
+  Ongoing
+  Completed
+  Cancelled
+}
+
+enum GovernmentIDType {
+  Aadhaar
+  Passport
+  VoterID
+  Pan
+}
+
+enum ComplaintCategory {
+  Laundry
+  Cleaning
+  Food
+  Electricity
+}
+
+enum PaymentStatus {
+  Paid
+  Unpaid
+}
+
+enum CotStatus {
+  AVAILABLE
+  OCCUPIED
+  BLOCKED
+  MAINTENANCE
+}
+
+enum SeaterType {
+  OneSeater
+  TwoSeater
+  ThreeSeater
+  FourSeater
+  FiveSeater
+  SixSeater
+}
